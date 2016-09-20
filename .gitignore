@@ -1,2 +1,5 @@
 *.csv
 .idea/
+.DS_Store
+*.iml
+out/
