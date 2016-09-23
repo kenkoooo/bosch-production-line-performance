@@ -3,15 +3,14 @@ import java.util.ArrayList;
 import java.util.TreeSet;
 
 public class ReducedCSVMaker {
-  private final String keyword = "numeric";
-  private final String input = "./resources/train_" + keyword + ".csv";
-  private final String output = "./output/reduced_" + keyword + ".csv";
-  private final String columns = "./output/same_columns_" + keyword;
+  private final String input = "./output/reduced_merged_removeT.csv.gz";
+  private final String output = "./output/reduced_merged.csv";
+  private final String columns = "./output/same_value_columns";
   final long start = System.currentTimeMillis();
 
   private void run() throws IOException {
     TreeSet<String> names = deadColumnNames();
-    BufferedReader br = Utils.getBufferedReader(input);
+    BufferedReader br = Utils.getGZBufferedReader(input);
     String[] header = br.readLine().split(",");
     boolean[] dead = new boolean[header.length];
     for (int i = 0; i < header.length; i++) {
@@ -33,7 +32,7 @@ public class ReducedCSVMaker {
     System.out.println(list.size() + " columns");
 
     // Read & Write
-    int fullSize = Utils.getFullSize(input);
+    int fullSize = Utils.getFullSize(input, true);
     int count = 0;
     String line;
     String[] row;
@@ -61,7 +60,7 @@ public class ReducedCSVMaker {
     BufferedReader reader = Utils.getBufferedReader(columns);
     String line;
     while ((line = reader.readLine()) != null) {
-      dead.add(line.split(" ")[1]);
+      dead.add(line);
     }
     return dead;
   }
