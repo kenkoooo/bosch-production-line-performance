@@ -51,15 +51,12 @@ public class LinearCoefficientReducer {
         }
         if (doubles[q.from] == Double.NaN || doubles[q.to] == Double.NaN) continue;
 
-        // 全ての値が同じ列は除いてあるはずなので, 0.0 が存在した場合、kを設定することはできない
-        if (doubles[q.from] == 0.0 || doubles[q.to] == 0.0) continue;
-
-        double k = doubles[q.from] / doubles[q.to];
+        double diff = doubles[q.from] - doubles[q.to];
         if (q.K == Double.NaN) {
-          q.K = k;
+          q.K = diff;
           deque.addLast(q);
-        } else if (Math.abs(q.K - k) < EPS) {
-          q.maxEPS = Math.max(q.maxEPS, Math.abs(q.K - k));
+        } else if (Math.abs(q.K - diff) < EPS) {
+          q.maxEPS = Math.max(q.maxEPS, Math.abs(q.K - diff));
           deque.addLast(q);
         }
       }
