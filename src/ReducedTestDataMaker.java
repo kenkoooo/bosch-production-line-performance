@@ -46,8 +46,8 @@ public class ReducedTestDataMaker {
       if (header[i] == null) continue;
       if (i > 0) writer.print(",");
       if (row.length > i) writer.print(row[i]);
-      writer.println();
     }
+    writer.println();
   }
 
   public static void main(String[] args) throws IOException {
