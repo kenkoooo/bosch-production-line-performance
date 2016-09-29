@@ -4,11 +4,14 @@ import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.TreeSet;
 
+/**
+ * 列が間引かれた train の header を基に test の列を間引く
+ */
 public class ReducedTestDataMaker {
   private final long start = System.currentTimeMillis();
-  private String train = "./output/reduced_train_date.csv.gz";
-  private String test = "./resources/test_date.csv.gz";
-  private String output = "./output/reduced_test_date.csv";
+  private String train = "./output/reduced_train_numeric_binary.csv.gz_reduced.csv.gz";
+  private String test = "./output/reduced_test_numeric_binary.csv.gz";
+  private String output = test + "_reduced.csv";
 
   private void purify(String[] trainHeader, String[] testHeader) {
     TreeSet<String> trainSet = new TreeSet<>();

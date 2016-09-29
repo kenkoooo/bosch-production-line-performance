@@ -5,7 +5,7 @@ import java.util.ArrayDeque;
 
 public class ColumnReducer {
   private final long start = System.currentTimeMillis();
-  private String input = "./output/reduced_test_numeric_binary.csv.gz";
+  private String input = "./output/reduced_train_categorical_binary.csv.gz";
   private String output = input + "_reduced.csv";
 
   private void run() throws IOException {
