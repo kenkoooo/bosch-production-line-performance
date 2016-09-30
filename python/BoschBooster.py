@@ -9,13 +9,13 @@ CHUNK_SIZE = 100000
 
 INPUTS = [
     "../output/reduced_train_date.csv.gz",
-    "../output/reduced_train_categorical.csv.gz",
+    "../output/reduced_train_categorical_binary.csv.gz_reduced.csv.gz",
     "../output/reduced_train_numeric.csv.gz"
 ]
 
 TESTS = [
     "../output/reduced_test_date.csv.gz",
-    "../output/reduced_test_categorical.csv.gz",
+    "../output/reduced_test_categorical_binary.csv.gz_reduced.csv.gz",
     "../output/reduced_test_numeric.csv.gz"
 ]
 
