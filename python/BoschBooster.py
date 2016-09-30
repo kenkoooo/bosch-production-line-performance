@@ -9,13 +9,13 @@ CHUNK_SIZE = 100000
 
 INPUTS = [
     "../output/reduced_train_date.csv.gz",
-    "../output/reduced_train_categorical_binary.csv.gz_reduced.csv.gz",
+    "../output/date_diff_train.csv.gz",
     "../output/reduced_train_numeric.csv.gz"
 ]
 
 TESTS = [
     "../output/reduced_test_date.csv.gz",
-    "../output/reduced_test_categorical_binary.csv.gz_reduced.csv.gz",
+    "../output/date_diff_test.csv.gz",
     "../output/reduced_test_numeric.csv.gz"
 ]
 
@@ -48,7 +48,7 @@ def sampled_data_set(train_files):
     categorical_chunks = general_df_chunk(train_files[1])
     num_chunks = general_df_chunk(train_files[2])
     X = pd.concat(
-        [pd.concat([d, c, n], axis=1).sample(frac=0.5) for d, c, n in zip(date_chunks, categorical_chunks, num_chunks)])
+        [pd.concat([d, c, n], axis=1) for d, c, n in zip(date_chunks, categorical_chunks, num_chunks)])
     return X
 
 
