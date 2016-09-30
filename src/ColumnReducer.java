@@ -5,7 +5,7 @@ import java.util.ArrayDeque;
 
 public class ColumnReducer {
   private final long start = System.currentTimeMillis();
-  private String input = "./output/reduced_train_categorical_binary.csv.gz";
+  private String input = "./output/reduced_train_numeric_binary.csv.gz";
   private String output = input + "_reduced.csv";
 
   private void run() throws IOException {
@@ -80,8 +80,9 @@ public class ColumnReducer {
       for (int i = 0; i < N; i++) {
         if (header[i] == null) continue;
         if (i > 0) writer.print(",");
-        if (row.length > i) writer.print(row[i]);
+        if (row.length > i && !row[i].equals("0")) writer.print(row[i]);
       }
+      writer.println();
 
       count++;
       if (count % 10000 == 0) {
