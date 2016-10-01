@@ -8,6 +8,7 @@ from ParallelCSVReader import ParallelCSVReaderLoader
 def new_one():
     start = time.time()
     loader = ParallelCSVReaderLoader(16, "../output/reduced_test_categorical.csv.gz")
+
     loader.start()
     loader.wait()
     print(time.time() - start)

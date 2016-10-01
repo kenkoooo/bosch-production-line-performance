@@ -30,16 +30,19 @@ class ParallelCSVReader(threading.Thread):
 class ParallelCSVReaderLoader:
     def __init__(self, thread_num, filename):
         COL_MAX = self.get_column_count(filename)
-        part_size = int(np.ceil(COL_MAX / thread_num))
+        part_size = int(COL_MAX / thread_num)
         begins = [0] * thread_num
         ends = [0] * thread_num
         for i in range(thread_num):
             if i == 0:
                 begins[i] = 1
                 ends[i] = part_size + 1
+            elif i == thread_num - 1:
+                begins[i] = ends[i - 1]
+                ends[i] = COL_MAX
             else:
                 begins[i] = ends[i - 1]
-                ends[i] = min(begins[i] + part_size + 1, COL_MAX)
+                ends[i] = begins[i] + part_size + 1
         self.readers = []
         for i in range(thread_num):
             reader = ParallelCSVReader(filename, begins[i], ends[i])
