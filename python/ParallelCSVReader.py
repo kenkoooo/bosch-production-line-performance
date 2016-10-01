@@ -13,7 +13,9 @@ class ParallelCSVReader(threading.Thread):
         self.df = None
 
     def run(self):
-        cols = np.concatenate([[0], list(range(self.begin, self.end))])
+        r = list(range(self.begin, self.end)
+        r = [int(i) for i in r]
+        cols = np.concatenate([[0], )])
         self.df = pd.read_csv(self.filename,
                               compression="gzip",
                               index_col=0,
