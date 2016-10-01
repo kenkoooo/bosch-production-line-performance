@@ -13,10 +13,8 @@ class ParallelCSVReader(threading.Thread):
         self.df = None
 
     def run(self):
-        r = list(range(self.begin, self.end))
-        r = [int(i) for i in r]
-        cols = np.concatenate([[0], r])
-        print(cols)
+        cols = np.concatenate([[0], list(range(self.begin, self.end))])
+        cols = list(cols)
         self.df = pd.read_csv(self.filename,
                               compression="gzip",
                               index_col=0,
@@ -44,8 +42,6 @@ class ParallelCSVReaderLoader:
                 ends[i] = min(begins[i] + part_size + 1, COL_MAX)
         self.readers = []
         for i in range(thread_num):
-            begins[i] = int(begins[i])
-            ends[i] = int(ends[i])
             reader = ParallelCSVReader(filename, begins[i], ends[i])
             self.readers.append(reader)
 
