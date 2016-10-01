@@ -27,4 +27,4 @@ def old_one():
 
 
 if __name__ == '__main__':
-    new_one()
+    old_one()
