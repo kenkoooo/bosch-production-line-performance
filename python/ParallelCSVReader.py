@@ -41,6 +41,8 @@ class ParallelCSVReaderLoader:
                 ends[i] = min(begins[i] + part_size + 1, COL_MAX)
         self.readers = []
         for i in range(thread_num):
+            begins[i] = int(begins[i])
+            ends[i] = int(ends[i])
             reader = ParallelCSVReader(filename, begins[i], ends[i])
             self.readers.append(reader)
 
