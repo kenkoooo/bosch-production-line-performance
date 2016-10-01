@@ -7,7 +7,7 @@ from ParallelCSVReader import ParallelCSVReaderLoader
 
 def new_one():
     start = time.time()
-    loader = ParallelCSVReaderLoader(16, "../output/reduced_test_categorical.csv.gz")
+    loader = ParallelCSVReaderLoader(16, "../output/reduced_test_merged.csv.gz")
 
     loader.start()
     loader.wait()
@@ -18,7 +18,7 @@ def new_one():
 
 def old_one():
     start = time.time()
-    X = pd.read_csv("../output/reduced_test_categorical.csv.gz",
+    X = pd.read_csv("../output/reduced_test_merged.csv.gz",
                     compression="gzip",
                     index_col=0,
                     dtype=np.float32
