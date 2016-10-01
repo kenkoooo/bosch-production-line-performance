@@ -37,14 +37,6 @@ def general_df(gz_file):
                        dtype=np.float32)
 
 
-def general_df_chunk(gz_file):
-    return pd.read_csv(gz_file,
-                       compression="gzip",
-                       index_col=0,
-                       chunksize=CHUNK_SIZE,
-                       dtype=np.float32)
-
-
 def sampled_data_set(train_files):
     dfs = []
     for train_file in train_files:
