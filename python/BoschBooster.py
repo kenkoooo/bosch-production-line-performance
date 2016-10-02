@@ -5,18 +5,14 @@ from sklearn.metrics import matthews_corrcoef, roc_auc_score
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
 import time
 
-CHUNK_SIZE = 100000
-
 INPUTS = [
-    "../output/reduced_train_date.csv.gz",
-    "../output/reduced_train_categorical.csv.gz",
+    "../output/reduced_train_date_normalized.csv.gz",
     "../output/reduced_train_numeric.csv.gz",
     "../output/date_diff_train.csv.gz"
 ]
 
 TESTS = [
-    "../output/reduced_test_date.csv.gz",
-    "../output/reduced_test_categorical.csv.gz",
+    "../output/reduced_test_date_normalized.csv.gz",
     "../output/reduced_test_numeric.csv.gz",
     "../output/date_diff_test.csv.gz"
 ]
@@ -40,6 +36,7 @@ def general_df(gz_file):
 def sampled_data_set(train_files):
     dfs = []
     for train_file in train_files:
+        print(train_file)
         df = general_df(train_file)
         dfs.append(df)
     return pd.concat(dfs, axis=1)
@@ -110,7 +107,7 @@ def main():
     print(roc_auc_score(y, predictions))
 
     print("Picking the best threshold out-of-fold ...")
-    thresholds = np.linspace(0.01, 0.99, 50)
+    thresholds = np.linspace(0.01, 0.99, 200)
     mcc = np.array([matthews_corrcoef(y, predictions > thr) for thr in thresholds])
     best_threshold = thresholds[mcc.argmax()]
     print(mcc.max())
