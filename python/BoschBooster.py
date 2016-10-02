@@ -7,12 +7,14 @@ import time
 
 INPUTS = [
     "../output/reduced_train_date_normalized.csv.gz",
+    "../output/reduced_train_categorical.csv.gz",
     "../output/reduced_train_numeric.csv.gz",
     "../output/date_diff_train.csv.gz"
 ]
 
 TESTS = [
     "../output/reduced_test_date_normalized.csv.gz",
+    "../output/reduced_test_categorical.csv.gz",
     "../output/reduced_test_numeric.csv.gz",
     "../output/date_diff_test.csv.gz"
 ]
