@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def count_columns(gzip_filename):
-    chunks = pd.read_csv(gzip_filename, compression="gzip", index_col=0, chunksize=1, dtype=np.float32)
+    chunks = pd.read_csv(gzip_filename, compression="gzip", index_col=0, chunksize=1)
     for chunk in chunks:
         return len(chunk.columns)
 
@@ -25,7 +25,7 @@ def sampled_data_set(train_files):
 
 
 def limited_cols_df_values(gz_file, use_cols):
-    return pd.read_csv(gz_file, index_col=0, dtype=np.float32, usecols=use_cols).values
+    return pd.read_csv(gz_file, index_col=0, usecols=use_cols, dtype=np.float32).values
 
 
 def use_cols_list(train_files, indices):
