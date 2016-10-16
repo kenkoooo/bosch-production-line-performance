@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 import time
 import seaborn as sns
 T_FILES = [
-    "hdf/train_categorical.hdf",
+    # "hdf/train_categorical.hdf",
     "hdf/train_numeric.hdf",
-    "hdf/train_date_L0_normalized.hdf",
-    "hdf/train_date_L1_normalized.hdf",
-    "hdf/train_date_L2_normalized.hdf",
-    "hdf/train_date_L3_normalized.hdf",
+    # "hdf/train_date_L0_normalized.hdf",
+    # "hdf/train_date_L1_normalized.hdf",
+    # "hdf/train_date_L2_normalized.hdf",
+    # "hdf/train_date_L3_normalized.hdf",
     "hdf/train_date_min_max.hdf",
     "hdf/train_date_L0_min_max.hdf",
     "hdf/train_date_L1_min_max.hdf",
@@ -27,7 +27,8 @@ T_FILES = [
     "hdf/train_mask.hdf",
     "hdf/train_S_min_max.hdf",
     "hdf/train_S_C_md5.hdf",
-    "hdf/train_S_N_md5.hdf",
+    # "hdf/train_S_N_md5.hdf",
+    "hdf/train_S29_C_md5_28.hdf"
 ]
 RESPONSE = "hdf/train_response.hdf"
 
@@ -36,7 +37,7 @@ def select_ccolumns(indices, file_list, remove_columns):
     print("Loading Train Data...")
     X = pd.concat((pd.read_hdf(filename).loc[indices]
                    for filename in file_list), axis=1)
-    X.drop(remove_columns, axis=1, inplace=True)
+    X.drop([c for c in X.columns if c in remove_columns], axis=1, inplace=True)
     columns = X.columns
     y = pd.read_hdf(RESPONSE).loc[X.index].values.ravel()
     X = X.values
@@ -81,12 +82,12 @@ def xgboost_bosch(train_indices, train_file_list, important_columns):
     plt.plot(thresholds, mcc)
     best_threshold = thresholds[mcc.argmax()]
     print(mcc.max())
-    return clf, best_threshold
+    return clf, best_threshold, predictions
 
 
 def drop_columns(df, undrop_columns):
-    drop_columns = [c for c in df.columns if c not in undrop_columns]
-    df.drop(drop_columns, axis=1, inplace=True)
+    df.drop([c for c in df.columns if c not in undrop_columns],
+            axis=1, inplace=True)
     return df
 
 
@@ -109,39 +110,23 @@ def predict(important_columns, test_indices, clf, best_threshold,
     sub["Response"] = predictions
     return sub
 
-cdf = pd.concat([pd.read_hdf("hdf/train_categorical.hdf"),
-                 pd.read_hdf("hdf/train_response.hdf")], axis=1)
-tr_a = cdf[cdf["L3_S32_F3851"] == 1.0].index
-cdf.drop("L3_S32_F3851", axis=1, inplace=True)
-tr_b = np.concatenate([cdf[cdf["Response"] == 1.0].index,
-                       cdf[cdf["Response"] == 0.0].sample(n=700000).index])
+train = pd.read_hdf("hdf/train_response.hdf").sample(n=800000).index
+columns, column_scores = select_ccolumns(train, T_FILES,
+                                         ["L3_S32_C3854", "S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
+                                          "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5"])
 
-cdf = pd.read_hdf("hdf/test_categorical.hdf")
-te_a = cdf[cdf["L3_S32_F3851"] == 1.0].index
-te_b = cdf.drop(te_a).index
-
-del cdf
-
-columns, column_scores = select_ccolumns(
-    tr_a, T_FILES, ["S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
-                    "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5"])
-
-important_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
-
-clf, best_threshold = xgboost_bosch(tr_a, T_FILES, important_columns)
-sub_a = predict(important_columns, te_a, clf, best_threshold, T_FILES)
-
-columns, column_scores = select_ccolumns(
-    tr_b, T_FILES, ["S32_C_md5", "S3_C_md5",  "S21_C_md5", "S6_C_md5",
-                    "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5"])
 [(c, s)for c, s in zip(columns, column_scores)]
-
 important_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
-clf, best_threshold = xgboost_bosch(pd.read_hdf(
-    "hdf/train_response.hdf").index, T_FILES, important_columns)
 
-sub_b = predict(important_columns, te_b, clf, best_threshold, T_FILES)
+index = pd.read_hdf("hdf/train_response.hdf").index
+clf, best_threshold, predictions = xgboost_bosch(
+    index, T_FILES, important_columns)
 
-sub = pd.concat([sub_a, sub_b])
+df = pd.read_hdf("hdf/train_response.hdf")
+df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
+df[(df["Response"] == 1) & (df["Predict"] == 0)]
+df[(df["Response"] == 0) & (df["Predict"] == 1)]
 
+test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
+sub = predict(important_columns, test, clf, best_threshold, T_FILES)
 sub.to_csv("submission.csv.gz", compression="gzip")
