@@ -9,6 +9,7 @@ import seaborn as sns
 T_FILES = [
     # "hdf/train_categorical.hdf",
     "hdf/train_numeric.hdf",
+    "hdf/train_magic_numeric.hdf",
     # "hdf/train_date_L0_normalized.hdf",
     # "hdf/train_date_L1_normalized.hdf",
     # "hdf/train_date_L2_normalized.hdf",
@@ -110,13 +111,13 @@ def predict(important_columns, test_indices, clf, best_threshold,
     sub["Response"] = predictions
     return sub
 
-train = pd.read_hdf("hdf/train_response.hdf").sample(n=800000).index
+train = pd.read_hdf("hdf/train_response.hdf").sample(n=900000).index
 columns, column_scores = select_ccolumns(train, T_FILES,
                                          ["L3_S32_C3854", "S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
                                           "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5"])
 
 [(c, s)for c, s in zip(columns, column_scores)]
-important_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
+important_columns = [c for c, s in zip(columns, column_scores) if s > 0.004]
 
 index = pd.read_hdf("hdf/train_response.hdf").index
 clf, best_threshold, predictions = xgboost_bosch(
@@ -124,8 +125,8 @@ clf, best_threshold, predictions = xgboost_bosch(
 
 df = pd.read_hdf("hdf/train_response.hdf")
 df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
-df[(df["Response"] == 1) & (df["Predict"] == 0)]
-df[(df["Response"] == 0) & (df["Predict"] == 1)]
+df[(df["Response"] == 1) & (df["Predict"] == 0)].shape[0]
+df[(df["Response"] == 0) & (df["Predict"] == 1)].shape[0]
 
 test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
 sub = predict(important_columns, test, clf, best_threshold, T_FILES)
