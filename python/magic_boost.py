@@ -10,6 +10,9 @@ T_FILES = [
     # "hdf/train_categorical.hdf",
     "hdf/train_numeric.hdf",
     "hdf/train_magic_numeric.hdf",
+    "hdf/train_magic_line.hdf",
+    "hdf/train_S24_N_binary_md5.hdf",
+    "hdf/train_md5_count.hdf",
     # "hdf/train_date_L0_normalized.hdf",
     # "hdf/train_date_L1_normalized.hdf",
     # "hdf/train_date_L2_normalized.hdf",
@@ -111,13 +114,14 @@ def predict(important_columns, test_indices, clf, best_threshold,
     sub["Response"] = predictions
     return sub
 
-train = pd.read_hdf("hdf/train_response.hdf").sample(n=900000).index
+train = pd.read_hdf("hdf/train_response.hdf").sample(n=1000000).index
 columns, column_scores = select_ccolumns(train, T_FILES,
                                          ["L3_S32_C3854", "S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
-                                          "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5"])
+                                          "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5", "S35_C_md5"])
 
 [(c, s)for c, s in zip(columns, column_scores)]
-important_columns = [c for c, s in zip(columns, column_scores) if s > 0.004]
+important_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
+len(important_columns)
 
 index = pd.read_hdf("hdf/train_response.hdf").index
 clf, best_threshold, predictions = xgboost_bosch(
