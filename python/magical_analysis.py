@@ -31,8 +31,8 @@ train = pd.read_hdf("hdf/train_response.hdf")
 test = pd.DataFrame(index=test_date.index, columns=[])
 
 
-train["start_time"] = train_date.min(axis=1)
-test["start_time"] = test_date.min(axis=1)
+train["start_time"] = train_numeric["L1_S24_F1844"]
+test["start_time"] = test_numeric["L1_S24_F1844"]
 
 train_test = pd.concat((train, test))
 train_test["Id"] = train_test.index
@@ -42,4 +42,5 @@ train_test['magic3'] = train_test["Id"].diff().fillna(9999999).astype(int)
 train_test['magic4'] = train_test["Id"].iloc[
     ::-1].diff().fillna(9999999).astype(int)
 
+twoplot(train_test.loc[train.index], "magic3")
 twoplot(train_test.loc[train.index], "magic4")

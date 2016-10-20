@@ -27,22 +27,23 @@ test_numeric = pd.read_hdf("hdf/test_numeric.hdf")
 
 columns = train_numeric.columns
 
-train = pd.read_hdf("hdf/train_response.hdf")
+df = pd.DataFrame(index=np.concatenate(
+    [train_numeric.index, test_numeric.index]), columns=[])
+
+train = pd.DataFrame(index=train_numeric.index, columns=[])
 test = pd.DataFrame(index=test_numeric.index, columns=[])
 
-i = 0
+for i in range(len(columns)):
+    c = columns[i]
 
-c = columns[i]
-train[c] = train_numeric[c]
-test[c] = test_numeric[c]
+    train[c] = train_numeric[c]
+    test[c] = test_numeric[c]
 
-train_test = pd.concat([train, test])
-train_test["Id"] = train_test.index
+    train_test = pd.concat([train, test])
+    train_test["Id"] = train_test.index
 
-train_test = train_test.sort_values(by=[c, "Id"], ascending=True)
-train_test[c + '_magic3'] = train_test["Id"].diff().fillna(9999999).astype(int)
-train_test[c + '_magic4'] = train_test["Id"].iloc[::-
-                                                  1].diff().fillna(9999999).astype(int)
-twoplot(train_test.loc[train.index], c + '_magic3')
-twoplot(train_test.loc[train.index], c + '_magic4')
-i += 1
+    train_test = train_test.sort_values(by=[c, "Id"], ascending=True)
+    df[c + '_magic3'] = train_test["Id"].diff().fillna(9999999).astype(int)
+    df[c + '_magic4'] = train_test["Id"].iloc[::-
+                                              1].diff().fillna(9999999).astype(int)
+    print(i, len(columns))

@@ -6,45 +6,30 @@ from sklearn.cross_validation import cross_val_score, StratifiedKFold
 import matplotlib.pyplot as plt
 import time
 import seaborn as sns
+
+
 T_FILES = [
-    # "hdf/train_categorical.hdf",
-    "hdf/train_magic_numeric.hdf",
-    "hdf/train_magic_line.hdf",  # line ごとの date の min から magic を生成
-    "hdf/train_S24_N_binary_md5.hdf",
+    # "hdf/train_S_C_md5_count.hdf",
+    # "hdf/train_magic_categorical.hdf",
+    # "hdf/train_magic_line.hdf",
+    # "hdf/train_S24_N_binary_md5.hdf",
     # "hdf/train_date_L0_normalized.hdf",
     # "hdf/train_date_L1_normalized.hdf",
     # "hdf/train_date_L2_normalized.hdf",
     # "hdf/train_date_L3_normalized.hdf",
-    "hdf/train_date_min_max.hdf",
-    "hdf/train_date_L0_min_max.hdf",
-    "hdf/train_date_L1_min_max.hdf",
-    "hdf/train_date_L2_min_max.hdf",
-    "hdf/train_date_L3_min_max.hdf",
-    "hdf/train_magic.hdf",
-    "hdf/train_categorical_L3_S32_F3854_decomposite.hdf",
-    "hdf/train_numeric_L1_S24_F1844_extract.hdf",
-    "hdf/train_numeric_L1_S24_F1723_-0.12.hdf",
-    "hdf/train_numeric_L1_S24_F1723_extract.hdf",
-    "hdf/train_mask.hdf",
-    "hdf/train_S_min_max.hdf",
-    "hdf/train_S_C_md5.hdf",
+    # "hdf/train_date_L1_min_max.hdf",
+    # "hdf/train_numeric_L1_S24_F1844_extract.hdf",
+    # "hdf/train_numeric_L1_S24_F1723_-0.12.hdf",
+    # "hdf/train_numeric_L1_S24_F1723_extract.hdf",
+    # "hdf/train_S_C_md5.hdf",
     # "hdf/train_S_N_md5.hdf",
-    "hdf/train_S29_C_md5_28.hdf"
+    # "hdf/train_S29_C_md5_28.hdf",
 ]
 RESPONSE = "hdf/train_response.hdf"
 
 
-def debug_read_hdf(filename):
-    df = pd.read_hdf(filename)
-    print(filename, len(df.columns))
-    return df
-
-
-def select_ccolumns(indices, file_list, remove_columns):
+def select_ccolumns(X):
     print("Loading Train Data...")
-    X = pd.concat((debug_read_hdf(filename).loc[indices]
-                   for filename in file_list), axis=1)
-    X.drop([c for c in X.columns if c in remove_columns], axis=1, inplace=True)
     columns = X.columns
     y = pd.read_hdf(RESPONSE).loc[X.index].values.ravel()
     X = X.values
@@ -61,11 +46,11 @@ def select_ccolumns(indices, file_list, remove_columns):
     return columns, column_scores
 
 
-def xgboost_bosch(train_indices, train_file_list, important_columns):
+def xgboost_bosch(train_file_list, important_columns):
     print("Reloading Train Data...")
     X = pd.concat(
         (drop_columns(
-            pd.read_hdf(filename).loc[train_indices], important_columns)
+            pd.read_hdf(filename), important_columns)
          for filename in train_file_list),
         axis=1)
     y = pd.read_hdf(RESPONSE)
@@ -117,29 +102,86 @@ def predict(important_columns, test_indices, clf, best_threshold,
     sub["Response"] = predictions
     return sub
 
-important_columns = []
-train = pd.read_hdf("hdf/train_response.hdf").index
 
-columns, column_scores = select_ccolumns(train, ["hdf/train_numeric.hdf"],
-                                         ["L3_S32_C3854", "S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
-                                          "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5", "S35_C_md5"])
+using_files = (
+    [
+        'magic4',
+        'L0_min',
+        'L3_S30_F3749_magic4',
+        'L1_S24_F1842',
+        'L3_S32_F3854_2',
+        'L3_S30_F3704',
+        'L3_S29_F3407',
+        'L3_S29_F3351',
+        'L1_S24_F1844',
+        'L3_S38_F3952_magic4',
+        'min',
+        'L2_min',
+        'L1_S24_F1723',
+        'L3_S38_F3956_magic4',
+        'L1_S24_F1846',
+        'min_max',
+        'L3_min',
+        'L1_S24_F1498',
+        'L0_S11_F322',
+        'L3_S33_F3857_magic4',
+        'L3_S32_F3854_4',
+        'L3_S30_F3744_magic3',
+        'L3_S29_F3461_magic4',
+        'L1_S24_F867',
+        'L0_S9_F180',
+        'mask',
+        'S33_min',
+        'S32_min',
+        'L3_S33_F3865',
+        'L3_S32_F3850_magic4',
+        'L3_S30_F3829_magic3',
+        'max',
+        'L3_S38_F3960_magic4',
+        'L3_S38_F3960',
+        'L3_S33_F3873',
+        'L3_S33_F3859',
+        'L3_S30_F3754_magic3',
+        'L3_S29_F3461',
+        'L3_S29_F3339',
+        'L2_S26_F3040',
+        'L1_S24_F1723_magic3',
+        'L1_S24_F1632',
+        'L0_S4_F104',
+        'L3_max',
+        'L3_S33_F3873_magic3',
+        'L3_S33_F3857',
+        'L3_S32_F3854_48',
+        'L3_S30_F3749',
+        'L1_S24_F1758',
+        'L1_S24_F1494',
+        'L0_S21_F497',
+        'L0_S12_F350',
+        'L0_S10_F244'
+    ],
+    [
+        "hdf/train_numeric.hdf",
+        "hdf/train_magic_numeric.hdf",
+        "hdf/train_date_min_max.hdf",
+        "hdf/train_date_L0_min_max.hdf",
+        "hdf/train_date_L2_min_max.hdf",
+        "hdf/train_date_L3_min_max.hdf",
+        "hdf/train_magic.hdf",
+        "hdf/train_categorical_L3_S32_F3854_decomposite.hdf",
+        "hdf/train_S_min_max.hdf",
+        "hdf/train_mask.hdf"
+    ])
+
+X = pd.concat((pd.read_hdf(filename)
+               for filename in using_files[1]), axis=1).loc[:, using_files[0]]
+               
+columns, column_scores = select_ccolumns(X)
 [(c, s)for c, s in zip(columns, column_scores)]
-important_columns.extend(
-    [c for c, s in zip(columns, column_scores) if s > 0.005])
+use_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
 
-columns, column_scores = select_ccolumns(train, T_FILES,
-                                         ["L3_S32_C3854", "S32_C_md5", "S3_C_md5", "S21_C_md5", "S6_C_md5",
-                                          "S33_C_md5", "S36_C_md5", "S2_C_md5", "S15_C_md5", "S7_C_md5", "S35_C_md5"])
+len(use_columns)
 
-[(c, s)for c, s in zip(columns, column_scores)]
-important_columns.extend(
-    [c for c, s in zip(columns, column_scores) if s > 0.005])
-
-important_columns
-
-index = pd.read_hdf("hdf/train_response.hdf").index
-clf, best_threshold, predictions = xgboost_bosch(
-    index, ["hdf/train_numeric.hdf"] + T_FILES, important_columns)
+clf, best_threshold, predictions = xgboost_bosch(T_FILES, use_columns)
 
 df = pd.read_hdf("hdf/train_response.hdf")
 df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
@@ -147,6 +189,5 @@ df[(df["Response"] == 1) & (df["Predict"] == 0)].shape[0]
 df[(df["Response"] == 0) & (df["Predict"] == 1)].shape[0]
 
 test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
-sub = predict(important_columns, test, clf, best_threshold,
-              ["hdf/train_numeric.hdf"] + T_FILES)
+sub = predict(use_columns, test, clf, best_threshold, T_FILES)
 sub.to_csv("submission.csv.gz", compression="gzip")
