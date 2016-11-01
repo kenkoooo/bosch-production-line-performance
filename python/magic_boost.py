@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
+import xgboost
 from xgboost import XGBClassifier
 from sklearn.metrics import matthews_corrcoef, roc_auc_score
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
 import matplotlib.pyplot as plt
 import time
 import seaborn as sns
-
+%matplotlib inline
 
 T_FILES = [
     # "hdf/train_S_C_md5_count.hdf",
@@ -55,10 +56,11 @@ def xgboost_bosch(train_file_list, important_columns):
         axis=1)
     y = pd.read_hdf(RESPONSE)
     y = y.loc[X.index].values.ravel()
+    column_names = X.columns
     X = X.values
     # 予測して Cross Validation
     print("Predicting...")
-    clf = XGBClassifier(max_depth=5, base_score=0.005)
+    clf = XGBClassifier(max_depth=7, base_score=0.005)
     cv = StratifiedKFold(y, n_folds=3)
     predictions = np.ones(y.shape[0])
     for i, (train, test) in enumerate(cv):
@@ -74,7 +76,7 @@ def xgboost_bosch(train_file_list, important_columns):
     plt.plot(thresholds, mcc)
     best_threshold = thresholds[mcc.argmax()]
     print(mcc.max())
-    return clf, best_threshold, predictions
+    return clf, best_threshold, predictions, column_names
 
 
 def drop_columns(df, undrop_columns):
@@ -157,7 +159,24 @@ using_files = (
         'L1_S24_F1494',
         'L0_S21_F497',
         'L0_S12_F350',
-        'L0_S10_F244'
+        'L0_S10_F244',
+        "magic4-1",
+        'L3_S30_F3704_0.05700000002980232',
+        'L3_S30_F3704_-0.25099998712539673',
+        'L3_S30_F3704_-0.04500000178813934',
+        'L3_S30_F3704_-0.1899999976158142',
+        'L3_S30_F3704_0.01600000075995922',
+        'L3_S30_F3704_-0.125',
+        'L3_S30_F3704_-0.003000000026077032',
+        'L3_S30_F3704_-0.004000000189989805',
+        'L3_S30_F3704_-0.20999999344348907',
+        'L3_S30_F3704_0.1979999989271164',
+        'L3_S30_F3704_0.20100000500679016',
+        'L3_S30_F3704_0.14000000059604645',
+        'L3_S30_F3704_-0.08699999749660492',
+        'L3_S30_F3704_0.05400000140070915',
+        'L3_S30_F3704_0.017000000923871994',
+        "L1_S24_F1844_-0.325_-0.275"
     ],
     [
         "hdf/train_numeric.hdf",
@@ -169,19 +188,36 @@ using_files = (
         "hdf/train_magic.hdf",
         "hdf/train_categorical_L3_S32_F3854_decomposite.hdf",
         "hdf/train_S_min_max.hdf",
-        "hdf/train_mask.hdf"
+        "hdf/train_mask.hdf",
+        "hdf/train_magic4-1.hdf",
+        "hdf/train_L3_S30_F3704_deconposite.hdf",
+        "hdf/train_L1_S24_F1844_-0.325_-0.275.hdf"
     ])
 
 X = pd.concat((pd.read_hdf(filename)
                for filename in using_files[1]), axis=1).loc[:, using_files[0]]
-               
+
 columns, column_scores = select_ccolumns(X)
 [(c, s)for c, s in zip(columns, column_scores)]
 use_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
 
 len(use_columns)
 
-clf, best_threshold, predictions = xgboost_bosch(T_FILES, use_columns)
+clf, best_threshold, predictions, column_names = xgboost_bosch(
+    using_files[1],
+    using_files[0])
+g = xgboost.to_graphviz(clf.booster())
+svg_str = g._repr_svg_()
+mapper = {'f{0}'.format(i): v for i, v in enumerate(column_names)}
+for k, v in mapper.items():
+    svg_str = svg_str.replace(k + "&", v + "&")
+with open("tree.svg", "w") as f:
+    f.write(svg_str)
+    f.close()
+
+mapped = {mapper[k]: v for k, v in clf.booster().get_fscore().items()}
+xgboost.plot_importance(mapped)
+
 
 df = pd.read_hdf("hdf/train_response.hdf")
 df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
@@ -189,5 +225,5 @@ df[(df["Response"] == 1) & (df["Predict"] == 0)].shape[0]
 df[(df["Response"] == 0) & (df["Predict"] == 1)].shape[0]
 
 test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
-sub = predict(use_columns, test, clf, best_threshold, T_FILES)
+sub = predict(using_files[0], test, clf, best_threshold, using_files[1])
 sub.to_csv("submission.csv.gz", compression="gzip")
