@@ -176,7 +176,10 @@ using_files = (
         'L3_S30_F3704_-0.08699999749660492',
         'L3_S30_F3704_0.05400000140070915',
         'L3_S30_F3704_0.017000000923871994',
-        "L1_S24_F1844_-0.325_-0.275"
+        "L1_S24_F1844_-0.325_-0.275",
+        'L3_S29_F3407_0.05700000002980232',
+        'L3_S29_F3407_0.03700000047683716',
+        'L3_S29_F3407_-0.028999999165534973'
     ],
     [
         "hdf/train_numeric.hdf",
@@ -191,7 +194,8 @@ using_files = (
         "hdf/train_mask.hdf",
         "hdf/train_magic4-1.hdf",
         "hdf/train_L3_S30_F3704_deconposite.hdf",
-        "hdf/train_L1_S24_F1844_-0.325_-0.275.hdf"
+        "hdf/train_L1_S24_F1844_-0.325_-0.275.hdf",
+        "hdf/train_L3_S29_F3407_decomposite.hdf"
     ])
 
 X = pd.concat((pd.read_hdf(filename)
