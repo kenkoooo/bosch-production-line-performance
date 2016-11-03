@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-import xgboost
-from xgboost import XGBClassifier
+from sklearn import svm, model_selection
 from sklearn.metrics import matthews_corrcoef, roc_auc_score
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
 import matplotlib.pyplot as plt
@@ -12,38 +11,34 @@ import seaborn as sns
 RESPONSE = "hdf/train_response.hdf"
 
 
-def select_ccolumns(X):
-    print("Loading Train Data...")
-    columns = X.columns
-    y = pd.read_hdf(RESPONSE).loc[X.index].values.ravel()
-    X = X.values
-    # Feature Selection
-    print("Selecting Train Features...")
-    clf = XGBClassifier(base_score=0.005)
-    clf.fit(X, y)
-    tmp = [(clf.feature_importances_[i], columns[i])
-           for i in range(len(columns))]
-    tmp = sorted(tmp, reverse=True)
-    columns = [c[1] for c in tmp]
-    column_scores = [c[0] for c in tmp]
-
-    return columns, column_scores
-
-
-def xgboost_bosch(train_file_list, important_columns):
-    print("Reloading Train Data...")
+def load_df(train_file_list, important_columns):
     X = pd.concat(
         (drop_columns(
             pd.read_hdf(filename), important_columns)
          for filename in train_file_list),
         axis=1)
+    column_names = X.columns
+    return X, column_names
+
+
+def svm_test(X):
     y = pd.read_hdf(RESPONSE)
     y = y.loc[X.index].values.ravel()
-    column_names = X.columns
     X = X.values
     # 予測して Cross Validation
-    print("Predicting...")
-    clf = XGBClassifier(max_depth=7, base_score=0.005)
+    tuned_parameters = [
+        {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
+        {'C': [1, 10, 100, 1000], 'kernel': ['rbf'], 'gamma': [0.001, 0.0001]},
+        {'C': [1, 10, 100, 1000], 'kernel': ['poly'],
+            'degree': [2, 3, 4], 'gamma': [0.001, 0.0001]},
+        {'C': [1, 10, 100, 1000], 'kernel': [
+            'sigmoid'], 'gamma': [0.001, 0.0001]}
+    ]
+    tuned_parameters = [
+        {'C': [1, 10, 100, 1000], 'kernel': ['rbf'], 'gamma': [0.001, 0.0001]},
+    ]
+    clf = model_selection.GridSearchCV(
+        svm.SVC(), tuned_parameters, cv=3, n_jobs=-1)
     cv = StratifiedKFold(y, n_folds=3)
     predictions = np.ones(y.shape[0])
     for i, (train, test) in enumerate(cv):
@@ -59,7 +54,7 @@ def xgboost_bosch(train_file_list, important_columns):
     plt.plot(thresholds, mcc)
     best_threshold = thresholds[mcc.argmax()]
     print(mcc.max())
-    return clf, best_threshold, predictions, column_names
+    return clf, best_threshold, predictions
 
 
 def drop_columns(df, undrop_columns):
@@ -162,10 +157,7 @@ using_files = (
         "L1_S24_F1844_-0.325_-0.275",
         'L3_S29_F3407_0.05700000002980232',
         'L3_S29_F3407_0.03700000047683716',
-        'L3_S29_F3407_-0.028999999165534973',
-        "L3_S30_F3749_magic4-1",
-        "min_max_30_50",
-        "min_max_25"
+        'L3_S29_F3407_-0.028999999165534973'
     ],
     [
         "hdf/train_numeric.hdf",
@@ -181,40 +173,12 @@ using_files = (
         "hdf/train_magic4-1.hdf",
         "hdf/train_L3_S30_F3704_deconposite.hdf",
         "hdf/train_L1_S24_F1844_-0.325_-0.275.hdf",
-        "hdf/train_L3_S29_F3407_decomposite.hdf",
-        "hdf/train_L3_S30_F3749_magic4-1.hdf",
-        "hdf/train_min_max_30_50.hdf",
-        "hdf/train_min_max_25.hdf"
+        "hdf/train_L3_S29_F3407_decomposite.hdf"
     ])
 
-X = pd.concat((pd.read_hdf(filename)
-               for filename in using_files[1]), axis=1).loc[:, using_files[0]]
 
-columns, column_scores = select_ccolumns(X)
-[(c, s)for c, s in zip(columns, column_scores)]
-use_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
-
-len(use_columns)
-
-clf, best_threshold, predictions, column_names = xgboost_bosch(
-    using_files[1],
-    using_files[0])
-g = xgboost.to_graphviz(clf.booster())
-svg_str = g._repr_svg_()
-mapper = {'f{0}'.format(i): v for i, v in enumerate(column_names)}
-for k, v in mapper.items():
-    svg_str = svg_str.replace(k + "&", v + "&")
-with open("tree.svg", "w") as f:
-    f.write(svg_str)
-    f.close()
-
-
-tmp = [(clf.feature_importances_[i], column_names[i])
-       for i in range(len(column_names))]
-tmp = sorted(tmp, key=lambda x: x[0])
-tmp
-mapped = {mapper[k]: v for k, v in clf.booster().get_fscore().items()}
-xgboost.plot_importance(mapped)
+X.fillna(-2, inplace=True)
+clf, best_threshold, predictions = svm_test(X)
 
 
 df = pd.read_hdf("hdf/train_response.hdf")

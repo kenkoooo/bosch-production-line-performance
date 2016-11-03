@@ -26,36 +26,29 @@ def twoplot(df, col, xaxis=None):
     del ndf
 
 
-train = pd.read_hdf("hdf/train_numeric.hdf")
-test = pd.read_hdf("hdf/test_numeric.hdf")
+train = pd.read_hdf("hdf/train_date_min_max.hdf")
+test = pd.read_hdf("hdf/test_date_min_max.hdf")
 train_test = pd.concat([train, test])
 
 response = pd.read_hdf("hdf/train_response.hdf")
 train_test = pd.concat([train_test, response], axis=1)
-twoplot(train_test, "L3_S29_F3407")
+twoplot(train_test[train_test["min_max"] < 60], "min_max")
 
-df = pd.DataFrame(index=train_test.index, columns=[])
+min_max_origin = train_test[["min_max"]]
 
-values = train_test["L3_S29_F3407"].value_counts().index
-for value in values:
-    tmp = train_test[["L3_S29_F3407"]]
-    size = tmp[tmp["L3_S29_F3407"] == value].shape[0]
+min_max_30_50 = min_max_origin.where(
+    (min_max_origin > 30) & (min_max_origin < 50), 0.0)
+min_max_30_50 = min_max_30_50.where(min_max_30_50 == 0.0, 1.0)
+min_max_30_50.rename(columns={"min_max": "min_max_30_50"}, inplace=True)
+min_max_30_50.loc[train.index].to_hdf(
+    "hdf/train_min_max_30_50.hdf", "df", mode="w")
+min_max_30_50.loc[test.index].to_hdf(
+    "hdf/test_min_max_30_50.hdf", "df", mode="w")
 
-    tmp2 = train_test[train_test["L3_S29_F3407"] == value]
-    ok = tmp2[tmp2["Response"] == 1.0].shape[0]
-    ng = tmp2[tmp2["Response"] == 0.0].shape[0]
-
-    ratio = ok / (ok + ng)
-    if size < 30000 or ratio < 0.007:
-        continue
-
-    tmp = tmp.where(tmp == value, 0.0)
-    tmp = tmp.where(tmp == 0.0, 1.0)
-    key = "L3_S29_F3407_{v}".format(v=value)
-    df[key] = tmp["L3_S29_F3407"]
-
-df.loc[train.index].to_hdf(
-    "hdf/train_L3_S29_F3407_decomposite.hdf", "df", mode="w")
-df.loc[test.index].to_hdf(
-    "hdf/test_L3_S29_F3407_decomposite.hdf", "df", mode="w")
-df.columns
+min_max_25 = min_max_origin.where(min_max_origin < 2.5, 0.0)
+min_max_25 = min_max_25.where(min_max_25 == 0.0, 1.0)
+min_max_25.rename(columns={"min_max": "min_max_25"}, inplace=True)
+min_max_25.loc[train.index].to_hdf(
+    "hdf/train_min_max_25.hdf", "df", mode="w")
+min_max_25.loc[test.index].to_hdf(
+    "hdf/test_min_max_25.hdf", "df", mode="w")
