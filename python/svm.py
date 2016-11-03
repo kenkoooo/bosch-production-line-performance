@@ -37,8 +37,10 @@ def svm_test(X):
     tuned_parameters = [
         {'C': [1, 10, 100, 1000], 'kernel': ['rbf'], 'gamma': [0.001, 0.0001]},
     ]
+    print("GridSearchCV")
     clf = model_selection.GridSearchCV(
         svm.SVC(), tuned_parameters, cv=3, n_jobs=-1)
+    print("done")
     cv = StratifiedKFold(y, n_folds=3)
     predictions = np.ones(y.shape[0])
     for i, (train, test) in enumerate(cv):
