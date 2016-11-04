@@ -1,0 +1,43 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+
+def twoplot(df, col, xaxis=None):
+    ''' scatter plot a feature split into response values as two subgraphs '''
+    if col not in df.columns.values:
+        print('ERROR: %s not a column' % col)
+    ndf = pd.DataFrame(index=df.index)
+    ndf[col] = df[col]
+    ndf[xaxis] = df[xaxis] if xaxis else df.index
+    ndf['Response'] = df['Response']
+
+    g = sns.FacetGrid(ndf, col="Response", hue="Response")
+    g.map(plt.scatter, xaxis, col, alpha=.7, s=1)
+    g.add_legend()
+
+    del ndf
+
+
+train = pd.read_hdf("hdf/train_mask.hdf")
+test = pd.read_hdf("hdf/test_mask.hdf")
+
+response = pd.read_hdf("hdf/train_response.hdf")
+
+train_test = pd.concat([train, test])
+
+df = pd.concat([train_test, response], axis=1)
+
+twoplot(df, "mask")
+
+values = df["mask"].value_counts().index
+df = pd.DataFrame(index=train_test.index, columns=[])
+for v in values:
+    df["mask_{}".format(int(v))] = train_test[train_test == v]["mask"]
+df.where(np.isnan(df), 1.0, inplace=True)
+df.where(df == 1.0, 0.0, inplace=True)
+df.loc[train.index].to_hdf("hdf/train_mask_decomposite.hdf", "df", mode="w")
+df.loc[test.index].to_hdf("hdf/test_mask_decomposite.hdf", "df", mode="w")
+df.columns

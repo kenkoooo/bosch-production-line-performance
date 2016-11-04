@@ -12,24 +12,6 @@ import seaborn as sns
 RESPONSE = "hdf/train_response.hdf"
 
 
-def select_ccolumns(X):
-    print("Loading Train Data...")
-    columns = X.columns
-    y = pd.read_hdf(RESPONSE).loc[X.index].values.ravel()
-    X = X.values
-    # Feature Selection
-    print("Selecting Train Features...")
-    clf = XGBClassifier(base_score=0.005)
-    clf.fit(X, y)
-    tmp = [(clf.feature_importances_[i], columns[i])
-           for i in range(len(columns))]
-    tmp = sorted(tmp, reverse=True)
-    columns = [c[1] for c in tmp]
-    column_scores = [c[0] for c in tmp]
-
-    return columns, column_scores
-
-
 def get_best_threshold(y, predictions):
     # MCC 最適化
     thresholds = np.linspace(0.01, 0.99, 200)
@@ -37,25 +19,16 @@ def get_best_threshold(y, predictions):
         [matthews_corrcoef(y, predictions > thr) for thr in thresholds])
     plt.plot(thresholds, mcc)
     best_threshold = thresholds[mcc.argmax()]
-    print("MCC: {}".format(mcc.max()))
-    print("Best Threshold: {}".format(best_threshold))
+    print(mcc.max())
     return best_threshold
 
 
 def evalmcc_min(preds, dtrain):
     labels = dtrain.get_label()
-    return 'MCC', -matthews_corrcoef(labels, preds > THRESHOLD)
+    return 'MCC', -matthews_corrcoef(labels, preds > best_threshold)
 
 
-def xgboost_bosch(train_file_list, important_columns, threshold):
-    global THRESHOLD
-    THRESHOLD = threshold
-    print("Reloading Train Data...")
-    X = pd.concat(
-        (drop_columns(
-            pd.read_hdf(filename), important_columns)
-         for filename in train_file_list),
-        axis=1)
+def xgboost_bosch(X):
     y = pd.read_hdf(RESPONSE)
     y = y.loc[X.index].values.ravel()
     column_names = X.columns
@@ -65,43 +38,15 @@ def xgboost_bosch(train_file_list, important_columns, threshold):
     clf = XGBClassifier(max_depth=10, base_score=0.005, seed=71)
     cv = StratifiedKFold(y, n_folds=3)
     predictions = np.ones(y.shape[0])
-    print("threshold={}".format(threshold))
     for i, (train, test) in enumerate(cv):
         predictions[test] = clf.fit(X[train],
                                     y[train],
                                     eval_metric=evalmcc_min).predict_proba(X[test])[:, 1]
-        print("fold {}, MCC: {:.3f}".format(i, matthews_corrcoef(
-            y[test], predictions[test] > threshold)))
-    print(matthews_corrcoef(y, predictions > threshold))
-    get_best_threshold(y, predictions)
-    return clf, predictions, column_names
-
-
-def drop_columns(df, undrop_columns):
-    df.drop([c for c in df.columns if c not in undrop_columns],
-            axis=1, inplace=True)
-    return df
-
-
-def predict(important_columns, test_indices, clf, best_threshold,
-            train_file_list):
-    test_file_list = []
-    for file in train_file_list:
-        test_file_list.append(file.replace("train", "test"))
-    # テストデータ読み込み
-    print("Loading Test Data...")
-    X = pd.concat(
-        (drop_columns(pd.read_hdf(filename).loc[test_indices], important_columns)
-         for filename in test_file_list),
-        axis=1)
-    X = X.values
-    # 0 or 1 に正規化
-    predictions = (clf.predict_proba(X)[:, 1] > best_threshold).astype(np.int8)
-    # 提出データを生成
-    sub = pd.DataFrame(index=test_indices.astype(np.int32), columns=[])
-    sub["Response"] = predictions
-    return sub
-
+        print("fold {}, ROC AUC: {:.3f}".format(i, roc_auc_score(y[
+            test], predictions[test])))
+    print(roc_auc_score(y, predictions))
+    best_threshold = get_best_threshold(y, predictions)
+    return clf, best_threshold, predictions, column_names
 
 using_files = (
     [
@@ -173,11 +118,15 @@ using_files = (
         'mask_111',
         'mask_1011',
         'mask_101',
-        "numeric_pattern_count",
-        "F1723_-0.1",
-        "F1844_6_magic4-1",
-        "F1723_1844",
-        "F3794_m4"
+        'mask_1',
+        'mask_1111',
+        'mask_1101',
+        'mask_11',
+        'mask_0',
+        'mask_110',
+        'mask_100',
+        'mask_1010',
+        'mask_1100'
     ],
     [
         "hdf/train_numeric.hdf",
@@ -197,35 +146,14 @@ using_files = (
         "hdf/train_L3_S30_F3749_magic4-1.hdf",
         "hdf/train_min_max_30_50.hdf",
         "hdf/train_min_max_25.hdf",
-        "hdf/train_mask_decomposite.hdf",
-        "hdf/train_numeric_pattern_count.hdf",
-        "hdf/train_F1723_-0.1.hdf",
-        "hdf/train_F1844_6_magic4-1.hdf",
-        "hdf/train_F1723_1844.hdf",
-        "hdf/train_F3794_m4.hdf"
+        "hdf/train_mask_decomposite.hdf"
     ])
 
 X = pd.concat((pd.read_hdf(filename)
                for filename in using_files[1]), axis=1).loc[:, using_files[0]]
 
-columns, column_scores = select_ccolumns(X)
-[(c, s)for c, s in zip(columns, column_scores)]
-use_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
 
-len(use_columns)
-
-clf, predictions, column_names = xgboost_bosch(
-    using_files[1],
-    using_files[0],
-    0.41)
-g = xgboost.to_graphviz(clf.booster())
-svg_str = g._repr_svg_()
-mapper = {'f{0}'.format(i): v for i, v in enumerate(column_names)}
-for k, v in mapper.items():
-    svg_str = svg_str.replace(k + "&", v + "&")
-with open("tree.svg", "w") as f:
-    f.write(svg_str)
-    f.close()
+clf, best_threshold, predictions, column_names = xgboost_bosch(X)
 
 
 tmp = [(clf.feature_importances_[i], column_names[i])
@@ -235,13 +163,18 @@ tmp
 mapped = {mapper[k]: v for k, v in clf.booster().get_fscore().items()}
 xgboost.plot_importance(mapped)
 
-df = pd.read_hdf("hdf/train_response.hdf")
-df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
-df[(df["Response"] == 1) & (df["Predict"] == 0)].shape[0]
-df[(df["Response"] == 0) & (df["Predict"] == 1)].shape[0]
-df[(df["Response"] == 1) & (df["Predict"] == 1)].shape[0]
+
+X = pd.concat((pd.read_hdf(filename.replace("train", "test"))
+               for filename in using_files[1]), axis=1).loc[:, using_files[0]]
 
 
-test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
-sub = predict(using_files[0], test, clf, best_threshold, using_files[1])
+test_indices = X.index
+X = X.values
+# 0 or 1 に正規化
+best_threshold
+predictions = (clf.predict_proba(X)[:, 1] > best_threshold).astype(np.int8)
+# 提出データを生成
+sub = pd.DataFrame(index=test_indices.astype(np.int32), columns=[])
+sub["Response"] = predictions
+
 sub.to_csv("submission.csv.gz", compression="gzip")
