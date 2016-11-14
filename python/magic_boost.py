@@ -30,7 +30,18 @@ def select_ccolumns(X):
     return columns, column_scores
 
 
-def get_best_threshold(y, predictions):
+def get_best_mcc(y, predictions):
+    # MCC 最適化
+    thresholds = np.linspace(0.01, 0.99, 200)
+    mcc = np.array(
+        [matthews_corrcoef(y, predictions > thr) for thr in thresholds])
+    best_threshold = thresholds[mcc.argmax()]
+    print("MCC: {}".format(mcc.max()))
+    print("Best Threshold: {}".format(best_threshold))
+    return mcc.max()
+
+
+def plot_mcc(y, predictions):
     # MCC 最適化
     thresholds = np.linspace(0.01, 0.99, 200)
     mcc = np.array(
@@ -44,12 +55,10 @@ def get_best_threshold(y, predictions):
 
 def evalmcc_min(preds, dtrain):
     labels = dtrain.get_label()
-    return 'MCC', -matthews_corrcoef(labels, preds > THRESHOLD)
+    return 'MCC', -get_best_mcc(labels, preds)
 
 
-def xgboost_bosch(train_file_list, important_columns, threshold):
-    global THRESHOLD
-    THRESHOLD = threshold
+def xgboost_bosch(train_file_list, important_columns):
     print("Reloading Train Data...")
     X = pd.concat(
         (drop_columns(
@@ -63,17 +72,20 @@ def xgboost_bosch(train_file_list, important_columns, threshold):
     # 予測して Cross Validation
     print("Predicting...")
     clf = XGBClassifier(max_depth=10, base_score=0.005, seed=71)
-    cv = StratifiedKFold(y, n_folds=3)
+    # predictions = clf.fit(
+    # X, y, eval_metric=evalmcc_min).predict_proba(X)[:, 1]
+
+    cv = StratifiedKFold(y, n_folds=100)
     predictions = np.ones(y.shape[0])
-    print("threshold={}".format(threshold))
     for i, (train, test) in enumerate(cv):
-        predictions[test] = clf.fit(X[train],
-                                    y[train],
-                                    eval_metric=evalmcc_min).predict_proba(X[test])[:, 1]
-        print("fold {}, MCC: {:.3f}".format(i, matthews_corrcoef(
-            y[test], predictions[test] > threshold)))
-    print(matthews_corrcoef(y, predictions > threshold))
-    get_best_threshold(y, predictions)
+        predictions[test] = clf.fit(
+            X[train],
+            y[train]).predict_proba(X[test])[:, 1]
+        print("fold {}, ROC AUC: {:.3f}".format(i, roc_auc_score(y[
+            test], predictions[test])))
+
+    print(roc_auc_score(y, predictions))
+    plot_mcc(y, predictions)
     return clf, predictions, column_names
 
 
@@ -205,19 +217,10 @@ using_files = (
         "hdf/train_F3794_m4.hdf"
     ])
 
-X = pd.concat((pd.read_hdf(filename)
-               for filename in using_files[1]), axis=1).loc[:, using_files[0]]
-
-columns, column_scores = select_ccolumns(X)
-[(c, s)for c, s in zip(columns, column_scores)]
-use_columns = [c for c, s in zip(columns, column_scores) if s > 0.005]
-
-len(use_columns)
 
 clf, predictions, column_names = xgboost_bosch(
     using_files[1],
-    using_files[0],
-    0.41)
+    using_files[0])
 g = xgboost.to_graphviz(clf.booster())
 svg_str = g._repr_svg_()
 mapper = {'f{0}'.format(i): v for i, v in enumerate(column_names)}
@@ -235,13 +238,27 @@ tmp
 mapped = {mapper[k]: v for k, v in clf.booster().get_fscore().items()}
 xgboost.plot_importance(mapped)
 
+X = pd.concat((pd.read_hdf(hdf) for hdf in using_files[1]), axis=1)
+X = X.loc[:, using_files[0]]
+X = pd.concat([pd.read_hdf(RESPONSE), X], axis=1)
+X = X.fillna(-2)
+g = sns.pairplot(X, hue="Response", diag_kind="kde", vars=[
+    "min_max",
+    "L3_S33_F3857",
+    "L3_S33_F3859",
+    "L3_S30_F3749",
+    "S33_min"], size=5)
+
+
 df = pd.read_hdf("hdf/train_response.hdf")
 df["Predict"] = np.array(predictions > best_threshold).astype(np.int8)
 df[(df["Response"] == 1) & (df["Predict"] == 0)].shape[0]
 df[(df["Response"] == 0) & (df["Predict"] == 1)].shape[0]
 df[(df["Response"] == 1) & (df["Predict"] == 1)].shape[0]
 
+best_threshold = plot_mcc(pd.read_hdf(RESPONSE).values.ravel(), predictions)
 
 test = pd.read_hdf("hdf/test_S29_C_md5_28.hdf").index
-sub = predict(using_files[0], test, clf, best_threshold, using_files[1])
+sub = predict(using_files[0], test, clf,
+              best_threshold, using_files[1])
 sub.to_csv("submission.csv.gz", compression="gzip")
